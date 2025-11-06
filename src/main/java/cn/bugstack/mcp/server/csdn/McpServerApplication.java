@@ -1,11 +1,14 @@
 package cn.bugstack.mcp.server.csdn;
 
 import cn.bugstack.mcp.server.csdn.infrastructure.gateway.IJueJinService;
+import cn.bugstack.mcp.server.csdn.type.properties.JueJinApiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import okhttp3.OkHttpClient;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -13,6 +16,7 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 import java.util.concurrent.TimeUnit;
 
 @SpringBootApplication
+@EnableConfigurationProperties(JueJinApiProperties.class)
 public class McpServerApplication {
 
     public static void main(String[] args) {
