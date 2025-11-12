@@ -10,15 +10,18 @@ spring:
 
   main:
     banner-mode: off
-    web-application-type: none
+# stdio 模式打开，sse 模式，注释掉。
+#    web-application-type: none
 
 logging:
-  pattern:
-    console:
+# stdio 模式打开，sse 模式，注释掉。
+#  pattern:
+#    console:
   file:
     name: data/log/${spring.application.name}.log
 
 server:
+  port: 8101
   servlet:
     encoding:
       charset: UTF-8
