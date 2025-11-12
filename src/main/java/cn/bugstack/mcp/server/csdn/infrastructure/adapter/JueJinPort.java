@@ -4,11 +4,15 @@ import cn.bugstack.mcp.server.csdn.domain.adapter.IJueJinPort;
 import cn.bugstack.mcp.server.csdn.domain.model.ArticleFunctionRequest;
 import cn.bugstack.mcp.server.csdn.domain.model.ArticleFunctionResponse;
 import cn.bugstack.mcp.server.csdn.infrastructure.gateway.IJueJinService;
+import cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleRequest;
+import cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleResponse;
 import cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.PublishRequest;
 import cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.PublishResponse;
 import cn.bugstack.mcp.server.csdn.type.properties.JueJinApiProperties;
 import cn.bugstack.mcp.server.csdn.type.utils.MarkdownConverter;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.jsoup.internal.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import retrofit2.Response;
@@ -17,6 +21,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 @Service
+@Slf4j
 public class JueJinPort implements IJueJinPort {
 
     @Resource
@@ -27,7 +32,7 @@ public class JueJinPort implements IJueJinPort {
     @Override
     public ArticleFunctionResponse publish(ArticleFunctionRequest request) throws IOException {
         // 1. 组装参数
-        cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleRequest articleRequest = cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleRequest.builder()
+        ArticleRequest articleRequest = ArticleRequest.builder()
                 .categoryId(jueJinApiProperties.getDefaultCategoryId())
                 .tagIds(Collections.singletonList(jueJinApiProperties.getDefaultTagId()))
                 .linkUrl("")
@@ -45,8 +50,8 @@ public class JueJinPort implements IJueJinPort {
         String cookie = jueJinApiProperties.getCookie();
 
         // 2. 创建草稿
-        Response<cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleResponse> articleResponse = jueJinService.createArticle(cookie, articleRequest).execute();
-        cn.bugstack.mcp.server.csdn.infrastructure.gateway.dto.ArticleResponse articleResponseData = articleResponse.body();
+        Response<ArticleResponse> articleResponse = jueJinService.createArticle(cookie, articleRequest).execute();
+        ArticleResponse articleResponseData = articleResponse.body();
         if (!articleResponse.isSuccessful() || null == articleResponseData || 0 != articleResponseData.getErrNo()) {
             throw new RuntimeException("创建草稿失败，错误码：" + articleResponseData.getErrNo() + "，错误信息：" + articleResponseData.getErrMsg());
         }
@@ -66,11 +71,27 @@ public class JueJinPort implements IJueJinPort {
                 .build();
 
         Response<PublishResponse> publishResponse = jueJinService.publishArticle(cookie, publishRequest).execute();
-        PublishResponse publishResponseData = publishResponse.body();
-        if (!publishResponse.isSuccessful() || null == publishResponseData || 0 != publishResponseData.getErrNo()){
-            throw new RuntimeException("发布草稿失败，错误码：" + publishResponseData.getErrNo() + "，错误信息：" + publishResponseData.getErrMsg());
-        }
+        if(publishResponse.isSuccessful()){
+            PublishResponse publishResponseData = publishResponse.body();
+            if(publishResponseData.getData() == null){
+                return null;
+            }
+            String articleUrl = "https://juejin.cn/post/" + publishResponseData.getData().getArticleId();
 
+            ArticleFunctionResponse.ArticleData articleData = ArticleFunctionResponse.ArticleData.builder()
+                    .url(articleUrl)
+                    .id(Long.parseLong(publishResponseData.getData().getArticleId()))
+                    .title(request.getTitle())
+                    .description(generateBriefContent(request.getBriefContent()))
+                    .build();
+
+            log.info("掘金发帖成功，标题:{} 链接:{} ", request.getTitle(), articleUrl);
+            return ArticleFunctionResponse.builder()
+                    .code(0)
+                    .msg("发布成功")
+                    .articleData(articleData).build();
+
+        }
         return null;
     }
 
